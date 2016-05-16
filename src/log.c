@@ -60,7 +60,7 @@ int _exec_cmd(char* cmd, ...)
 
     PRINTF("%s", buf);
     
-    return _systemEx(buf);
+    return system(buf);
 }
 
 void _log_format(char* cmd, ...)

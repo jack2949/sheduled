@@ -2,6 +2,8 @@
 
 #define PID_FILE_PATH		"/tmp/shedule.pid"
 #define CONFIG_FILE_PATH	"./config/shedule.config"
+#define LOG_FILE_PATH		"./reports/run.log"
+#define ERROR_LOG_FILE_PATH	"./reports/error.log"
 
 static void _daemonize()
 {
@@ -77,7 +79,7 @@ leave:
 static void _close(int signo)
 {
 	LOG_OUT("recvd SIGTERM, exit now.");
-	
+	_log_to_file(LOG_FILE_PATH, "recvd SIGTERM, exit now!");
 	unlink(PID_FILE_PATH);
 	exit(0);
 }
@@ -141,7 +143,7 @@ static void _main_loop()
 	{
 		time(&timep);		
 		p = localtime(&timep);
-		sprintf(timeStr, "[%02d:%02d:%02d]", p->tm_hour, p->tm_min, p->tm_sec);
+		sprintf(timeStr, "%02d:%02d:%02d", p->tm_hour, p->tm_min, p->tm_sec);
 
 		PRINTF("%s", timeStr);
 		
@@ -159,7 +161,14 @@ static void _main_loop()
 					command = cJSON_GetObjectItem(elm, "command");
 					if( command != NULL && command->type == cJSON_String )
 					{
-						_exec_cmd(command->valuestring);
+						if (OK == _exec_cmd(command->valuestring))
+						{
+							_log_to_file(LOG_FILE_PATH, "exec command OK:%s",	command->valuestring);
+						}
+						else
+						{
+							_log_to_file(ERROR_LOG_FILE_PATH, "exec command Fail:%s",	command->valuestring);
+						}
 					}
 				}
 			}
