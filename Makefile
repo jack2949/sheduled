@@ -3,12 +3,12 @@ CJSON_DIR    := $(TEST_SRC)/cJSON
 
 CFLAGS = -I$(CJSON_DIR)
 CFLAGS += -fPIC -std=gnu99 -I./include 
-CFLAGS += "-fno-stack-protector"
 LDFLAGS = -Wl,--start-group -ldl -lpthread -Wl,--end-group
 LDFLAGS += -L$(CJSON_DIR) -lcJSON -lm
 
 OBJS = $(TEST_SRC)/src/main.o
 OBJS += $(TEST_SRC)/src/log.o
+OBJS += $(CJSON_DIR)/cJSON.o
 
 TARGET = sheduled
 
