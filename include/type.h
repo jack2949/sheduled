@@ -1,7 +1,6 @@
 #ifndef __TYPE_H__
 #define __TYPE_H__
 
-/* value */
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -78,5 +77,12 @@
 
 #define	IP_ADDRESS_LENGTH			16
 #define	MAC_ADDRESS_LENGTH			18
+
+#define	MAX_COMMAND_LENGTH			128
+
+typedef	struct	_TASK_ENTRY_{
+	UINT32	startTime;
+	INT8	command[MAX_COMMAND_LENGTH];	
+}TASK_ENTRY;
 
 #endif /* __TYPE_H__ */

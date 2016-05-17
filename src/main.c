@@ -5,6 +5,10 @@
 #define LOG_FILE_PATH		"./reports/run.log"
 #define ERROR_LOG_FILE_PATH	"./reports/error.log"
 
+static TASK_ENTRY	*task = NULL;
+static int			task_index = 0;
+static int			task_MAX = 0;
+
 static void _daemonize()
 {
     int fd = 0;
@@ -116,7 +120,43 @@ static int _create_pid_file(void)
 	return ret;
 }
 
-static void _main_loop()
+static INT32 _current_time()
+{
+	time_t now;
+	struct tm *time_tm;
+	time(&now);
+
+	time_tm = localtime(&now);
+
+	return time_tm->tm_hour*60*60 + time_tm->tm_min*60 + time_tm->tm_sec;
+}
+
+static void _quick_sort(int head, int end, TASK_ENTRY *task)
+{
+    int first, last;
+	TASK_ENTRY tmp;
+    if(NULL == task || head >= end)
+        return ;
+
+    first = head;
+    last = end;
+    tmp = task[head];
+    while (head < end)
+    {
+        /* The "=" is must, or loop lock */
+        while(head < end && task[end].startTime >= tmp.startTime) end --;
+        task[head] = task[end];
+        /* The "=" is must. */
+        while(head < end && task[head].startTime <= tmp.startTime) head ++;
+        task[end] = task[head];
+    }
+    task[head] = tmp;
+
+    _quick_sort(first, head - 1, task);
+    _quick_sort(head + 1, last, task);
+}
+
+static int _load_config()
 {
 	cJSON *config = NULL;
 	cJSON *data = NULL;
@@ -125,57 +165,135 @@ static void _main_loop()
 	cJSON *command = NULL;
 	int cnt = 0;
 	int index = 0;
-	time_t timep;
-	struct tm *p;
-	char timeStr[16];
+	int hour,min,second;
+	int ret = OK;
+	
+	if (NULL != task)
+	{
+		free(task);
+		task = NULL;
+	}
 
 	config = _get_JSON_from_file(CONFIG_FILE_PATH);
-
 	if (NULL == config)
 	{
 		LOG_ERR("get config errer");
-		return;
+		ret = ERROR;
+		goto leave;
 	}
 
 	/* attendtion free */
-	PRINTF("data = %s", cJSON_Print(config));
+	PRINTF("data = %s", cJSON_Print(config));	
+	data = cJSON_GetObjectItem(config, "data");
+	cnt = cJSON_GetArraySize(data);
+
+	task = (TASK_ENTRY *)malloc(sizeof(TASK_ENTRY)*cnt);
+	if (NULL == task)
+	{
+		LOG_ERR("malloc error!");
+		ret = ERROR;
+		goto leave;
+	}
+	
+	for(index = 0; index < cnt; index++)
+	{
+		elm = cJSON_GetArrayItem(data, index);
+		startTime = cJSON_GetObjectItem(elm, "startTime");
+		if( startTime != NULL && startTime->type == cJSON_String )
+		{
+			sscanf(startTime->valuestring, "%d:%d:%d", &hour, &min, &second);
+			task[index].startTime = hour * 60 * 60 + min * 60 + second;
+		}
+		
+		command = cJSON_GetObjectItem(elm, "command");
+		if( command != NULL && command->type == cJSON_String )
+		{
+			if(strlen(command->valuestring) < MAX_COMMAND_LENGTH)
+			{
+				strcpy(task[index].command, command->valuestring);
+			}
+			else
+			{
+				LOG_ERR("command %s size %d error!", command->valuestring, strlen(command->valuestring));
+				_log_to_file(ERROR_LOG_FILE_PATH, "command %s size %d error!",	command->valuestring, strlen(command->valuestring));
+			}
+		}
+	}
+
+	_quick_sort(0, cnt - 1, task);
+	task_index = 0;
+	task_MAX = cnt;
+	
+#ifdef LOG_DEBUG
+	for(index = 0; index < cnt; index++)
+	{
+		PRINTF("%02d:%02d:%02d	%s", task[index].startTime/3600, (task[index].startTime % 3600)/60, task[index].startTime%60, task[index].command);
+	}
+#endif
+
+leave:
+	if(config)
+		cJSON_Delete(config);
+	
+	return ret;
+}
+
+static void _main_loop()
+{
+	INT32 sleepTime = 0;
+	INT32 currentTime = 0;
+	int i;
+
+	currentTime = _current_time();
+	for(i = 0; i < task_MAX; i++)
+	{
+		if(currentTime <= task[i].startTime)
+		{
+			break;
+		}
+	}
+	task_index = i%task_MAX;
+
+	PRINTF("task_MAX = %d, i = %d", task_MAX, i);
+	PRINTF("%02d:%02d:%02d	%s", task[task_index].startTime/3600, (task[task_index].startTime % 3600)/60, task[task_index].startTime%60, task[task_index].command);
+
 	while (TRUE)
 	{
-		time(&timep);		
-		p = localtime(&timep);
-		sprintf(timeStr, "%02d:%02d:%02d", p->tm_hour, p->tm_min, p->tm_sec);
-
-		PRINTF("%s", timeStr);
-		
-		data = cJSON_GetObjectItem(config, "data");
-		cnt = cJSON_GetArraySize(data);
-		
-		for(index = 0; index < cnt; index++)
+		if(task_index == 0)
 		{
-			elm = cJSON_GetArrayItem(data, index);
-			startTime = cJSON_GetObjectItem(elm, "startTime");
-			if( startTime != NULL && startTime->type == cJSON_String )
+			sleepTime = task[task_index].startTime + 24*60*60 - _current_time();
+		}
+		else
+		{
+			sleepTime = task[task_index].startTime - _current_time();			
+		}
+
+		if (sleepTime >= 0)
+		{
+			sleep(sleepTime);
+			if (OK == _exec_cmd(task[task_index].command))
 			{
-				if(0 == strncmp(startTime->valuestring, timeStr, strlen(timeStr)))
-				{ 
-					command = cJSON_GetObjectItem(elm, "command");
-					if( command != NULL && command->type == cJSON_String )
-					{
-						if (OK == _exec_cmd(command->valuestring))
-						{
-							_log_to_file(LOG_FILE_PATH, "exec command OK:%s",	command->valuestring);
-						}
-						else
-						{
-							_log_to_file(ERROR_LOG_FILE_PATH, "exec command Fail:%s",	command->valuestring);
-						}
-					}
-				}
+				_log_to_file(LOG_FILE_PATH, "exec command OK:%s",	task[task_index].command);
+			}
+			else
+			{
+				_log_to_file(ERROR_LOG_FILE_PATH, "exec command Fail:%s",	task[task_index].command);
+			}
+		}
+		else
+		{
+			_log_to_file(ERROR_LOG_FILE_PATH, "%02d:%02d:%02d late exec:%s", task[task_index].startTime/3600, (task[task_index].startTime % 3600)/60, task[task_index].startTime%60, task[task_index].command);
+			if (OK == _exec_cmd(task[task_index].command))
+			{
+				_log_to_file(LOG_FILE_PATH, "exec command OK:%s",	task[task_index].command);
+			}
+			else
+			{
+				_log_to_file(ERROR_LOG_FILE_PATH, "exec command Fail:%s",	task[task_index].command);
 			}
 		}
 
-		sleep(1);
-		//usleep(800*1000);
+		task_index = (task_index + 1) % task_MAX ; 
 	}
 }
 
@@ -194,6 +312,13 @@ int main(int argc, char *argv[])
         goto exit;
 	}
 
+	if (_load_config() == ERROR)
+	{
+		LOG_ERR("load config error!\n");
+    	ret = ERROR;
+        goto exit;
+	}
+	
 	_main_loop();
 
 exit:

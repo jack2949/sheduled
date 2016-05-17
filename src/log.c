@@ -93,7 +93,7 @@ void _log_to_file(char* file_name, char* cmd, ...)
 	time(&timep);		
 	p = localtime(&timep);
 
-	snprintf(buf1, sizeof(buf1), "echo \"[%02d:%02d:%02d] %s\" >> %s", p->tm_hour, p->tm_min, p->tm_sec, buf, file_name);
+	snprintf(buf1, sizeof(buf1), "echo \"[%02d-%02d %02d:%02d:%02d] %s\" >> %s", p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, buf, file_name);
 	system(buf1);
 }
 
