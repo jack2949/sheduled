@@ -2,8 +2,6 @@
 
 #define PID_FILE_PATH		"/tmp/shedule.pid"
 #define CONFIG_FILE_PATH	"./config/shedule.config"
-#define LOG_FILE_PATH		"./reports/run.log"
-#define ERROR_LOG_FILE_PATH	"./reports/error.log"
 
 static TASK_ENTRY	*task = NULL;
 static int			task_index = 0;
@@ -271,25 +269,25 @@ static void _main_loop()
 		if (sleepTime >= 0)
 		{
 			sleep(sleepTime);
-			if (OK == _exec_cmd(task[task_index].command))
+			if (OK == _exec_by_pthread(task[task_index].command))
 			{
-				_log_to_file(LOG_FILE_PATH, "exec command OK:%s",	task[task_index].command);
+				_log_to_file(LOG_FILE_PATH, "exec task OK:%s",	task[task_index].command);
 			}
 			else
 			{
-				_log_to_file(ERROR_LOG_FILE_PATH, "exec command Fail:%s",	task[task_index].command);
+				_log_to_file(ERROR_LOG_FILE_PATH, "exec task Fail:%s",	task[task_index].command);
 			}
 		}
 		else
 		{
 			_log_to_file(ERROR_LOG_FILE_PATH, "%02d:%02d:%02d late exec:%s", task[task_index].startTime/3600, (task[task_index].startTime % 3600)/60, task[task_index].startTime%60, task[task_index].command);
-			if (OK == _exec_cmd(task[task_index].command))
+			if (OK == _exec_by_pthread(task[task_index].command))
 			{
-				_log_to_file(LOG_FILE_PATH, "exec command OK:%s",	task[task_index].command);
+				_log_to_file(LOG_FILE_PATH, "exec task OK:%s",	task[task_index].command);
 			}
 			else
 			{
-				_log_to_file(ERROR_LOG_FILE_PATH, "exec command Fail:%s",	task[task_index].command);
+				_log_to_file(ERROR_LOG_FILE_PATH, "exec task Fail:%s",	task[task_index].command);
 			}
 		}
 

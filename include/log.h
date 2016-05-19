@@ -8,7 +8,7 @@ void _log_format(char* cmd, ...);
 
 void _log_to_file(char* file_name, char* cmd, ...);
 
-//#define LOG_DEBUG
+#define LOG_DEBUG
 #define PRINTF	LOG_PRINT
 
 #ifdef LOG_DEBUG
@@ -26,5 +26,8 @@ void _log_to_file(char* file_name, char* cmd, ...);
 #define LOG_ERR(fmt, args...) do { \
         _log_format("[ERROR][%s:%d]: " fmt "\n", __func__, __LINE__, ## args); \
 } while (0)
+
+#define LOG_FILE_PATH		"./reports/run.log"
+#define ERROR_LOG_FILE_PATH	"./reports/error.log"
 
 #endif

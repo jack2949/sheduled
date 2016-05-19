@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <sys/wait.h> 
 #include <time.h>
+#include <pthread.h>
 
 #include "cJSON.h"
 

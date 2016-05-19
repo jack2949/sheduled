@@ -49,6 +49,32 @@ int _systemEx (char *command)
 	return 0;
 }
 
+void * _exec_command(void *argv)
+{
+	char *command = (char *)argv;
+
+	if(0 == system(command))
+	{
+		_log_to_file(LOG_FILE_PATH, "exec command OK:%s",	command);
+	}
+	else
+	{
+		_log_to_file(ERROR_LOG_FILE_PATH, "exec command Fail:%s",	command);
+	}
+	
+	return NULL;
+}
+
+int _exec_by_pthread(char *command)
+{
+	pthread_t t;
+	pthread_attr_t a; 
+	pthread_attr_init(&a);	
+	pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);	  
+
+	return pthread_create( &t, &a, _exec_command, (void*)command);			
+}
+
 int _exec_cmd(char* cmd, ...)
 {
     char buf[2048] = {0};
