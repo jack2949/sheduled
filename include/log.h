@@ -8,6 +8,9 @@ void _log_format(char* cmd, ...);
 
 void _log_to_file(char* file_name, char* cmd, ...);
 
+int _exec_by_pthread(char *command);
+
+
 #define LOG_DEBUG
 #define PRINTF	LOG_PRINT
 

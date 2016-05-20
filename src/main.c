@@ -242,6 +242,7 @@ static void _main_loop()
 	INT32 currentTime = 0;
 	int i;
 
+	_log_to_file(LOG_FILE_PATH, "load config ok, start now!");
 	currentTime = _current_time();
 	for(i = 0; i < task_MAX; i++)
 	{

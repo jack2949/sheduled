@@ -67,12 +67,12 @@ void * _exec_command(void *argv)
 
 int _exec_by_pthread(char *command)
 {
-	pthread_t t;
+	pthread_t pid;
 	pthread_attr_t a; 
 	pthread_attr_init(&a);	
 	pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);	  
 
-	return pthread_create( &t, &a, _exec_command, (void*)command);			
+	return pthread_create( &pid, &a, _exec_command, (void*)command);			
 }
 
 int _exec_cmd(char* cmd, ...)
